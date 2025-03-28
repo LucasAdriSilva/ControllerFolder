@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renomeador de Arquivos</title>
+</head>
+<body>
+    <button id="selectFolder">Selecionar Pasta</button>
+    <button id="renameFiles">Renomear Arquivos</button>
+    <p id="status"></p>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        document.getElementById('selectFolder').addEventListener('click', async () => {
+            const folderPath = await ipcRenderer.invoke('select-folder');
+            if (folderPath) {
+                document.getElementById('status').innerText = `Pasta Selecionada: ${folderPath}`;
+                window.folderPath = folderPath;
+            }
+        });
+
+        document.getElementById('renameFiles').addEventListener('click', async () => {
+            if (!window.folderPath) {
+                alert('Selecione uma pasta primeiro!');
+                return;
+            }
+            const result = await ipcRenderer.invoke('rename-files', window.folderPath);
+            document.getElementById('status').innerText = result.message;
+        });
+    </script>
+</body>
+</html>
