@@ -18,6 +18,7 @@ Este aplicativo permite que você renomeie múltiplos arquivos em uma pasta, adi
 ## 🚀 Como Usar
 
 1. Clique no botão "Selecionar Pasta" para escolher a pasta que contém os arquivos que deseja renomear
+![TImagem do aplicativo](https://github.com/LucasAdriSilva/ControllerFolder/blob/master/assets/app.png)
 2. Clique em "Renomear Arquivos" para iniciar o processo
 3. O aplicativo irá:
    - Identificar arquivos que já possuem numeração
@@ -36,7 +37,7 @@ Este aplicativo permite que você renomeie múltiplos arquivos em uma pasta, adi
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/renomeador-arquivos.git
+git clone https://github.com/LucasAdriSilva/ControllerFolder
 cd renomeador-arquivos
 ```
 
@@ -94,7 +95,7 @@ Este projeto está sob a licença ISC. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## 👥 Autores
 
-- Seu Nome - [seu-usuario](https://github.com/seu-usuario)
+- Lucas Adriano - [LucasAdriSilva](https://github.com/LucasAdriSilva)
 
 ## 🙏 Agradecimentos
 
