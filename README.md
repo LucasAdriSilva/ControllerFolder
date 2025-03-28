@@ -18,7 +18,9 @@ Este aplicativo permite que você renomeie múltiplos arquivos em uma pasta, adi
 ## 🚀 Como Usar
 
 1. Clique no botão "Selecionar Pasta" para escolher a pasta que contém os arquivos que deseja renomear
+
 ![TImagem do aplicativo](https://github.com/LucasAdriSilva/ControllerFolder/blob/master/assets/app.png)
+
 2. Clique em "Renomear Arquivos" para iniciar o processo
 3. O aplicativo irá:
    - Identificar arquivos que já possuem numeração
