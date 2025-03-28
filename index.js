@@ -10,7 +10,7 @@ app.whenReady().then(() => {
         height: 700,
         minWidth: 800,
         minHeight: 700,
-        icon: path.join(__dirname, 'assets', 'icon.jpg'),
+        icon: path.join(__dirname, 'assets', 'icon.png'),
         webPreferences: {
             nodeIntegration: true,  // Permite usar require no index.html
             contextIsolation: false // Evita conflitos ao usar ipcRenderer
