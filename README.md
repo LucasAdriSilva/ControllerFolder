@@ -6,6 +6,23 @@ Um aplicativo desktop simples e eficiente para renomear arquivos automaticamente
 
 Este aplicativo permite que você renomeie múltiplos arquivos em uma pasta, adicionando uma numeração automática no início de cada nome de arquivo. É útil para organizar arquivos em uma sequência numérica, mantendo seus nomes originais após o número.
 
+## 🎯 Casos de Uso
+
+### Designers e Editores de Imagem
+- Organização de pastas de projetos com múltiplas imagens
+- Organização de assets para projetos de UI/UX
+- Gerenciamento de bibliotecas de imagens para sites e aplicativos
+
+### Fotógrafos
+- Organização de sessões fotográficas
+- Renomeação de fotos em lote
+- Preparação de imagens para portfólio
+
+### Desenvolvedores
+- Organização de assets de projetos
+- Gerenciamento de recursos de jogos
+- Organização de imagens de documentação
+
 ## ✨ Funcionalidades
 
 - Seleção de pasta com interface gráfica
@@ -27,6 +44,8 @@ Este aplicativo permite que você renomeie múltiplos arquivos em uma pasta, adi
    - Renomear os arquivos restantes começando do próximo número disponível
    - Mostrar o progresso em tempo real
    - Exibir um log detalhado das operações realizadas
+
+##
 
 ## 💻 Requisitos do Sistema
 
