@@ -2,6 +2,8 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const pptxgen = require('pptxgenjs');
+const sharp = require('sharp');
+const { createCanvas } = require('canvas');
 
 let mainWindow;
 
@@ -86,67 +88,152 @@ ipcMain.handle('rename-files', async (_, folderPath) => {
     };
 });
 
+async function generatePowerPoint(text, styleOptions, outputPath) {
+    const pres = new pptxgen();
+    const slides = text.split('\n').filter(line => line.trim());
+    const logs = [];
+
+    // Configurar o estilo padrão para todas as slides
+    pres.layout = 'LAYOUT_16x9';
+    pres.author = 'VSL Creator';
+
+    for (let i = 0; i < slides.length; i++) {
+        const slide = pres.addSlide();
+        const text = slides[i].trim();
+        
+        // Configurar o fundo da slide
+        slide.background = { color: styleOptions.backgroundColor };
+
+        // Configurar o texto com as opções de estilo
+        const textOptions = {
+            x: '10%',
+            y: '40%',
+            w: '80%',
+            h: '20%',
+            fontSize: styleOptions.fontSize,
+            color: styleOptions.textColor.replace('#', ''),
+            align: 'center',
+            valign: 'middle',
+            fontFace: styleOptions.fontFamily,
+            bold: styleOptions.bold,
+            italic: styleOptions.italic,
+            underline: styleOptions.underline
+        };
+
+        slide.addText(text, textOptions);
+        logs.push(`✓ Slide ${i + 1} criada: "${text}"`);
+    }
+
+    await pres.writeFile({ fileName: outputPath });
+    logs.push(`Apresentação salva com sucesso em: ${outputPath}`);
+
+    return logs;
+}
+
 ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
     try {
-        const result = await dialog.showSaveDialog(mainWindow, {
-            title: 'Salvar Apresentação',
-            defaultPath: path.join(app.getPath('documents'), 'apresentacao.pptx'),
-            filters: [{ name: 'PowerPoint', extensions: ['pptx'] }]
+        // Perguntar ao usuário qual formato deseja
+        const result = await dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            title: 'Escolher Formato',
+            message: 'Em qual formato você deseja gerar o conteúdo?',
+            buttons: ['PowerPoint', 'Imagens', 'Cancelar'],
+            defaultId: 0,
+            cancelId: 2
         });
 
-        if (!result.filePath) {
+        if (result.response === 2) { // Cancelar
             return { success: false, message: 'Operação cancelada pelo usuário' };
         }
 
         const logs = [];
-        logs.push('Iniciando criação da apresentação...');
+        logs.push('Iniciando geração do conteúdo...');
 
-        const pres = new pptxgen();
-        const slides = text.split('\n').filter(line => line.trim());
+        if (result.response === 0) { // PowerPoint
+            const saveResult = await dialog.showSaveDialog(mainWindow, {
+                title: 'Salvar Apresentação',
+                defaultPath: path.join(app.getPath('documents'), 'apresentacao.pptx'),
+                filters: [{ name: 'PowerPoint', extensions: ['pptx'] }]
+            });
 
-        // Configurar o estilo padrão para todas as slides
-        pres.layout = 'LAYOUT_16x9';
-        pres.author = 'VSL Creator';
+            if (!saveResult.filePath) {
+                return { success: false, message: 'Operação cancelada pelo usuário' };
+            }
 
-        for (let i = 0; i < slides.length; i++) {
-            const slide = pres.addSlide();
-            const text = slides[i].trim();
-            
-            // Configurar o fundo da slide
-            slide.background = { color: styleOptions.backgroundColor };
+            const pptLogs = await generatePowerPoint(text, styleOptions, saveResult.filePath);
+            logs.push(...pptLogs);
 
-            // Configurar o texto com as opções de estilo
-            const textOptions = {
-                x: '10%',
-                y: '40%',
-                w: '80%',
-                h: '20%',
-                fontSize: styleOptions.fontSize,
-                color: styleOptions.textColor.replace('#', ''),
-                align: 'center',
-                valign: 'middle',
-                fontFace: styleOptions.fontFamily,
-                bold: styleOptions.bold,
-                italic: styleOptions.italic,
-                underline: styleOptions.underline
+            return {
+                success: true,
+                message: 'Apresentação criada com sucesso!',
+                logs: logs
             };
+        } else { // Imagens
+            const folderResult = await dialog.showOpenDialog(mainWindow, {
+                title: 'Selecionar Pasta para Salvar Imagens',
+                properties: ['openDirectory']
+            });
 
-            slide.addText(text, textOptions);
-            logs.push(`✓ Slide ${i + 1} criada: "${text}"`);
+            if (!folderResult.filePaths[0]) {
+                return { success: false, message: 'Operação cancelada pelo usuário' };
+            }
+
+            const outputDir = folderResult.filePaths[0];
+            const imagesDir = path.join(outputDir, 'imagens');
+            
+            // Criar pasta 'imagens' se não existir
+            if (!fs.existsSync(imagesDir)) {
+                fs.mkdirSync(imagesDir);
+            }
+
+            const slides = text.split('\n').filter(line => line.trim());
+            
+            for (let i = 0; i < slides.length; i++) {
+                const text = slides[i].trim();
+                
+                // Criar um canvas com dimensões 1920x1080 (16:9)
+                const canvas = createCanvas(1920, 1080);
+                const ctx = canvas.getContext('2d');
+
+                // Preencher o fundo
+                ctx.fillStyle = styleOptions.backgroundColor;
+                ctx.fillRect(0, 0, 1920, 1080);
+
+                // Configurar o texto
+                ctx.fillStyle = styleOptions.textColor;
+                ctx.font = `${styleOptions.bold ? 'bold' : ''} ${styleOptions.italic ? 'italic' : ''} ${styleOptions.fontSize}px ${styleOptions.fontFamily}`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Adicionar o texto
+                ctx.fillText(text, 960, 540);
+
+                // Converter o canvas para buffer
+                const buffer = canvas.toBuffer('image/png');
+
+                // Salvar a imagem com numeração simples
+                const fileName = `${i + 1}.png`;
+                const filePath = path.join(imagesDir, fileName);
+                
+                await sharp(buffer)
+                    .png()
+                    .toFile(filePath);
+
+                logs.push(`✓ Imagem ${i + 1} criada: "${fileName}"`);
+            }
+
+            logs.push(`Imagens salvas com sucesso em: ${imagesDir}`);
+
+            return {
+                success: true,
+                message: 'Imagens criadas com sucesso!',
+                logs: logs
+            };
         }
-
-        await pres.writeFile({ fileName: result.filePath });
-        logs.push(`Apresentação salva com sucesso em: ${result.filePath}`);
-
-        return {
-            success: true,
-            message: 'Apresentação criada com sucesso!',
-            logs: logs
-        };
     } catch (error) {
         return {
             success: false,
-            message: `Erro ao criar apresentação: ${error.message}`,
+            message: `Erro ao criar conteúdo: ${error.message}`,
             logs: [`✗ Erro: ${error.message}`]
         };
     }
