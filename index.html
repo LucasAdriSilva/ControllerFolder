@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renomeador de Arquivos</title>
+    <title>Gerenciador de Arquivos</title>
     <style>
         * {
             margin: 0;
@@ -16,9 +17,44 @@
             background-color: #f5f5f5;
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            height: 100vh;
+            position: fixed;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 2rem;
+            text-align: center;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .menu-item {
+            padding: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+            transition: background-color 0.3s;
+        }
+
+        .menu-item:hover {
+            background-color: #34495e;
+        }
+
+        .menu-item.active {
+            background-color: #3498db;
+        }
+
+        .main-content {
+            margin-left: 250px;
             padding: 2rem;
+            width: calc(100% - 250px);
         }
 
         .container {
@@ -27,7 +63,8 @@
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
         h1 {
@@ -135,42 +172,213 @@
             color: #666;
             font-size: 0.9rem;
         }
+
+        .text-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            resize: vertical;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .style-options {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #dee2e6;
+        }
+
+        .style-group {
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .style-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .style-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+            width: 80%;
+        }
+
+        .style-group input[type="color"],
+        .style-group input[type="number"],
+        .style-group select {
+            width: 20%;
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        #fontFamily {
+            width: 40%;
+        }
+
+        #fontSizeLabel {
+            width: 60%;
+        }
+
+        .text-style-options {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .text-style-options label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: normal;
+        }
+
+        .text-style-options input[type="checkbox"] {
+            margin: 0;
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Renomeador de Arquivos</h1>
-        
-        <div class="instructions">
-            <p>1. Clique em "Selecionar Pasta" para escolher a pasta com os arquivos</p>
-            <p>2. Clique em "Renomear Arquivos" para adicionar numeração aos arquivos</p>
-        </div>
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <div class="menu-item active" data-page="renomeador">Renomeador de Arquivos</div>
+        <div class="menu-item" data-page="vsl">Criador de VSL</div>
+    </div>
 
-        <div class="button-group">
-            <button id="selectFolder">Selecionar Pasta</button>
-            <button id="renameFiles">Renomear Arquivos</button>
-        </div>
+    <div class="main-content">
+        <!-- Página do Renomeador -->
+        <div class="page active" id="renomeador">
+            <div class="container">
+                <h1>Renomeador de Arquivos</h1>
 
-        <div class="status-container">
-            <p id="status"></p>
-        </div>
+                <div class="instructions">
+                    <p>1. Clique em "Selecionar Pasta" para escolher a pasta com os arquivos</p>
+                    <p>2. Clique em "Renomear Arquivos" para adicionar numeração aos arquivos</p>
+                </div>
 
-        <div class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+                <div class="button-group">
+                    <button id="selectFolder">Selecionar Pasta</button>
+                    <button id="renameFiles">Renomear Arquivos</button>
+                </div>
+
+                <div class="status-container">
+                    <p id="status"></p>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
+                </div>
+
+                <div class="log-container">
+                    <div class="log-title">Log de Operações</div>
+                    <div id="logEntries"></div>
+                </div>
             </div>
-            <div class="progress-text" id="progressText">0%</div>
         </div>
 
-        <div class="log-container">
-            <div class="log-title">Log de Operações</div>
-            <div id="logEntries"></div>
+        <!-- Página do Criador de VSL -->
+        <div class="page" id="vsl">
+            <div class="container">
+                <h1>Criador de VSL</h1>
+
+                <div class="instructions">
+                    <p>Digite o texto para criar as apresentações. Cada linha será uma slide diferente.</p>
+                </div>
+
+                <div class="style-options">
+                    <div class="style-group">
+                        <label>Cor de Fundo:</label>
+                        <input type="color" id="backgroundColor" value="#FFFFFF">
+                    </div>
+                    <div class="style-group">
+                        <label>Cor do Texto:</label>
+                        <input type="color" id="textColor" value="#000000">
+                    </div>
+                    <div class="style-group">
+                        <label id="fontSizeLabel">Tamanho da Fonte:</label>
+                        <input type="number" id="fontSize" value="36" min="12" max="72">
+                    </div>
+                    <div class="style-group">
+                        <label>Fonte:</label>
+                        <select id="fontFamily">
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Helvetica">Helvetica</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Courier New">Courier New</option>
+                        </select>
+                    </div>
+                    <div class="style-group">
+                        <label>Estilo do Texto:</label>
+                        <div class="text-style-options">
+                            <label>
+                                <input type="checkbox" id="bold" checked> Negrito
+                            </label>
+                            <label>
+                                <input type="checkbox" id="italic"> Itálico
+                            </label>
+                            <label>
+                                <input type="checkbox" id="underline"> Sublinhado
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <textarea class="text-input" id="vslText"
+                    placeholder="Digite o texto aqui...&#10;Cada linha será uma slide diferente.&#10;Exemplo:&#10;Primeira linha&#10;Segunda linha&#10;Terceira linha"></textarea>
+
+                <div class="button-group">
+                    <button id="createVSL">Criar Apresentações</button>
+                </div>
+
+                <div class="status-container">
+                    <p id="vslStatus"></p>
+                </div>
+
+                <div class="log-container">
+                    <div class="log-title">Log de Operações</div>
+                    <div id="vslLogEntries"></div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         const { ipcRenderer } = require('electron');
 
+        // Navegação do menu
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', () => {
+                // Remove active class from all menu items and pages
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+                // Add active class to clicked menu item and corresponding page
+                item.classList.add('active');
+                document.getElementById(item.dataset.page).classList.add('active');
+            });
+        });
+
+        // Funções do Renomeador
         function addLogEntry(message) {
             const logEntries = document.getElementById('logEntries');
             const entry = document.createElement('div');
@@ -202,19 +410,56 @@
                 return;
             }
 
-            // Limpar log anterior
             document.getElementById('logEntries').innerHTML = '';
             updateProgress(0);
 
             const result = await ipcRenderer.invoke('rename-files', window.folderPath);
             document.getElementById('status').innerText = result.message;
-            
+
             if (result.logs) {
                 result.logs.forEach(log => addLogEntry(log));
             }
-            
+
             updateProgress(100);
+        });
+
+        // Funções do Criador de VSL
+        function addVslLogEntry(message) {
+            const logEntries = document.getElementById('vslLogEntries');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = message;
+            logEntries.insertBefore(entry, logEntries.firstChild);
+        }
+
+        document.getElementById('createVSL').addEventListener('click', async () => {
+            const text = document.getElementById('vslText').value;
+            if (!text.trim()) {
+                alert('Por favor, digite algum texto!');
+                return;
+            }
+
+            const styleOptions = {
+                backgroundColor: document.getElementById('backgroundColor').value,
+                textColor: document.getElementById('textColor').value,
+                fontSize: parseInt(document.getElementById('fontSize').value),
+                fontFamily: document.getElementById('fontFamily').value,
+                bold: document.getElementById('bold').checked,
+                italic: document.getElementById('italic').checked,
+                underline: document.getElementById('underline').checked
+            };
+
+            document.getElementById('vslLogEntries').innerHTML = '';
+            document.getElementById('vslStatus').innerText = 'Criando apresentações...';
+
+            const result = await ipcRenderer.invoke('create-vsl', text, styleOptions);
+            document.getElementById('vslStatus').innerText = result.message;
+
+            if (result.logs) {
+                result.logs.forEach(log => addVslLogEntry(log));
+            }
         });
     </script>
 </body>
+
 </html>
