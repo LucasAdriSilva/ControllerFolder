@@ -147,6 +147,20 @@
             border-bottom: none;
         }
 
+        .log-entry.info {
+            color: #666;
+            margin-left: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .log-entry.success {
+            color: #28a745;
+        }
+
+        .log-entry.error {
+            color: #dc3545;
+        }
+
         .progress-container {
             margin-top: 1rem;
         }
@@ -250,6 +264,14 @@
         .text-style-options input[type="checkbox"] {
             margin: 0;
         }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
     </style>
 </head>
 
@@ -258,6 +280,7 @@
         <h2>Menu</h2>
         <div class="menu-item active" data-page="renomeador">Renomeador de Arquivos</div>
         <div class="menu-item" data-page="vsl">Criador de VSL</div>
+        <div class="menu-item" data-section="convert">Converter Imagens</div>
     </div>
 
     <div class="main-content">
@@ -360,6 +383,33 @@
                 </div>
             </div>
         </div>
+
+        <div id="rename-section" class="content-section active">
+            <!-- ... existing code ... -->
+        </div>
+
+        <div id="convert-section" class="content-section">
+            <div class="container">
+                <h1>Converter Imagens</h1>
+                <div class="button-group">
+                    <button id="selectImageFolder">Selecionar Pasta/Imagem</button>
+                    <select id="outputFormat" class="format-select">
+                        <option value="jpeg">JPEG</option>
+                        <option value="png">PNG</option>
+                        <option value="webp">WebP</option>
+                        <option value="avif">AVIF</option>
+                        <option value="tiff">TIFF</option>
+                    </select>
+                    <button id="convertImages">Converter</button>
+                </div>
+                <div id="convertStatus" class="status"></div>
+                <div id="convertLog" class="log"></div>
+            </div>
+        </div>
+
+        <div id="powerpoint-section" class="content-section">
+            <!-- ... existing code ... -->
+        </div>
     </div>
 
     <script>
@@ -458,6 +508,50 @@
             if (result.logs) {
                 result.logs.forEach(log => addVslLogEntry(log));
             }
+        });
+
+        // Navegação entre seções
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                
+                item.classList.add('active');
+                const section = item.getAttribute('data-section');
+                document.getElementById(`${section}-section`).classList.add('active');
+            });
+        });
+
+        // Conversão de Imagens
+        document.getElementById('selectImageFolder').addEventListener('click', async () => {
+            const path = await ipcRenderer.invoke('select-image-folder');
+            if (path) {
+                document.getElementById('convertStatus').textContent = `Selecionado: ${path}`;
+            }
+        });
+
+        document.getElementById('convertImages').addEventListener('click', async () => {
+            const outputFormat = document.getElementById('outputFormat').value;
+            const status = document.getElementById('convertStatus');
+            const log = document.getElementById('convertLog');
+            
+            status.textContent = 'Convertendo...';
+            log.innerHTML = '';
+
+            const result = await ipcRenderer.invoke('convert-images', outputFormat);
+            
+            status.textContent = result.message;
+            log.innerHTML = result.logs.map(log => {
+                if (log.startsWith('✓')) {
+                    return `<div class="log-entry success">${log}</div>`;
+                } else if (log.startsWith('✗')) {
+                    return `<div class="log-entry error">${log}</div>`;
+                } else if (log.startsWith('  ')) {
+                    return `<div class="log-entry info">${log}</div>`;
+                } else {
+                    return `<div class="log-entry">${log}</div>`;
+                }
+            }).join('');
         });
     </script>
 </body>

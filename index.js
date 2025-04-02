@@ -6,6 +6,7 @@ const sharp = require('sharp');
 const { createCanvas } = require('canvas');
 
 let mainWindow;
+let selectedImagePath = null;
 
 app.whenReady().then(() => {
     mainWindow = new BrowserWindow({
@@ -237,4 +238,82 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
             logs: [`✗ Erro: ${error.message}`]
         };
     }
+});
+
+ipcMain.handle('select-image-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile', 'openDirectory'],
+        filters: [
+            { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'tiff'] },
+            { name: 'Todos os Arquivos', extensions: ['*'] }
+        ]
+    });
+    selectedImagePath = result.filePaths[0] || null;
+    return selectedImagePath;
+});
+
+ipcMain.handle('convert-images', async (_, outputFormat) => {
+    if (!selectedImagePath) {
+        return { success: false, message: 'Nenhuma imagem ou pasta selecionada' };
+    }
+
+    const stats = fs.statSync(selectedImagePath);
+    const isDirectory = stats.isDirectory();
+    const files = isDirectory 
+        ? fs.readdirSync(selectedImagePath).filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff'].includes(ext);
+        })
+        : [path.basename(selectedImagePath)];
+
+    // Criar pasta de saída com nome mais descritivo
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const outputDir = isDirectory 
+        ? path.join(selectedImagePath, `imagens_convertidas_${outputFormat.toUpperCase()}_${timestamp}`)
+        : path.join(path.dirname(selectedImagePath), `imagens_convertidas_${outputFormat.toUpperCase()}_${timestamp}`);
+
+    // Criar a pasta de saída
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const logs = [];
+    logs.push(`Iniciando conversão de ${files.length} imagem(ns)...`);
+
+    for (const file of files) {
+        const inputPath = isDirectory ? path.join(selectedImagePath, file) : selectedImagePath;
+        const outputPath = path.join(outputDir, `${path.parse(file).name}.${outputFormat}`);
+
+        try {
+            // Obter tamanho original
+            const originalStats = fs.statSync(inputPath);
+            const originalSize = (originalStats.size / 1024).toFixed(2); // Tamanho em KB
+
+            // Converter a imagem
+            await sharp(inputPath)
+                .toFormat(outputFormat)
+                .toFile(outputPath);
+
+            // Obter tamanho após conversão
+            const convertedStats = fs.statSync(outputPath);
+            const convertedSize = (convertedStats.size / 1024).toFixed(2); // Tamanho em KB
+
+            // Calcular redução
+            const reduction = ((originalStats.size - convertedStats.size) / originalStats.size * 100).toFixed(1);
+            
+            logs.push(`✓ Convertido: ${file}`);
+            logs.push(`  Tamanho original: ${originalSize} KB`);
+            logs.push(`  Tamanho após conversão: ${convertedSize} KB`);
+            logs.push(`  Redução: ${reduction}%`);
+            logs.push(`  Salvo em: ${outputPath}`);
+        } catch (error) {
+            logs.push(`✗ Erro ao converter ${file}: ${error.message}`);
+        }
+    }
+
+    return {
+        success: true,
+        message: `Conversão concluída! Arquivos salvos em: ${outputDir}`,
+        logs
+    };
 });
