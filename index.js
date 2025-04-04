@@ -21,7 +21,7 @@ app.whenReady().then(() => {
         },
     });
 
-    mainWindow.setTitle('Gerenciador de Arquivos');
+    mainWindow.setTitle('Tools Design');
     mainWindow.loadFile('index.html');
 });
 
