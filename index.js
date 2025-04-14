@@ -185,9 +185,9 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
 
                 // Configurar o texto com as opções de estilo
                 const textOptions = {
-                    x: isVertical ? '40%' : '10%',
+                    x: isVertical ? '30%' : '10%',
                     y: isVertical ? '30%' : '40%',
-                    w: isVertical ? '20%' : '80%',
+                    w: isVertical ? '40%' : '80%',
                     h: isVertical ? '40%' : '20%',
                     fontSize: styleOptions.fontSize,
                     color: styleOptions.textColor.replace('#', ''),
