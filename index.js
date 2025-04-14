@@ -118,7 +118,10 @@ async function generatePowerPoint(text, styleOptions, outputPath) {
             fontFace: styleOptions.fontFamily,
             bold: styleOptions.bold,
             italic: styleOptions.italic,
-            underline: styleOptions.underline
+            underline: styleOptions.underline,
+            breakLine: false,
+            maxLines: undefined,
+            autoFit: true,
         };
 
         slide.addText(text, textOptions);
@@ -182,9 +185,9 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
 
                 // Configurar o texto com as opções de estilo
                 const textOptions = {
-                    x: isVertical ? '10%' : '10%',
+                    x: isVertical ? '40%' : '10%',
                     y: isVertical ? '30%' : '40%',
-                    w: isVertical ? '80%' : '80%',
+                    w: isVertical ? '20%' : '80%',
                     h: isVertical ? '40%' : '20%',
                     fontSize: styleOptions.fontSize,
                     color: styleOptions.textColor.replace('#', ''),
@@ -193,7 +196,11 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
                     fontFace: styleOptions.fontFamily,
                     bold: styleOptions.bold,
                     italic: styleOptions.italic,
-                    underline: styleOptions.underline
+                    underline: styleOptions.underline,
+                    breakLine: isVertical ? true : false,
+                    maxLines: undefined,
+                    autoFit: true,
+                    fontSize: styleOptions.fontSize
                 };
 
                 slide.addText(text, textOptions);
