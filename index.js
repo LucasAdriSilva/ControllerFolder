@@ -150,6 +150,11 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
         const logs = [];
         logs.push('Iniciando geração do conteúdo...');
 
+        // Determinar dimensões baseado na orientação
+        const isVertical = styleOptions.orientation === 'vertical';
+        const width = isVertical ? 1080 : 1920;
+        const height = isVertical ? 1920 : 1080;
+
         if (result.response === 0) { // PowerPoint
             const saveResult = await dialog.showSaveDialog(mainWindow, {
                 title: 'Salvar Apresentação',
@@ -161,8 +166,42 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
                 return { success: false, message: 'Operação cancelada pelo usuário' };
             }
 
-            const pptLogs = await generatePowerPoint(text, styleOptions, saveResult.filePath);
-            logs.push(...pptLogs);
+            const pres = new pptxgen();
+            const slides = text.split('\n').filter(line => line.trim());
+
+            // Configurar o estilo padrão para todas as slides
+            pres.layout = isVertical ? 'LAYOUT_9x16' : 'LAYOUT_16x9';
+            pres.author = 'VSL Creator';
+
+            for (let i = 0; i < slides.length; i++) {
+                const slide = pres.addSlide();
+                const text = slides[i].trim();
+                
+                // Configurar o fundo da slide
+                slide.background = { color: styleOptions.backgroundColor };
+
+                // Configurar o texto com as opções de estilo
+                const textOptions = {
+                    x: '10%',
+                    y: '40%',
+                    w: '80%',
+                    h: '20%',
+                    fontSize: styleOptions.fontSize,
+                    color: styleOptions.textColor.replace('#', ''),
+                    align: 'center',
+                    valign: 'middle',
+                    fontFace: styleOptions.fontFamily,
+                    bold: styleOptions.bold,
+                    italic: styleOptions.italic,
+                    underline: styleOptions.underline
+                };
+
+                slide.addText(text, textOptions);
+                logs.push(`✓ Slide ${i + 1} criada: "${text}"`);
+            }
+
+            await pres.writeFile({ fileName: saveResult.filePath });
+            logs.push(`Apresentação salva com sucesso em: ${saveResult.filePath}`);
 
             return {
                 success: true,
@@ -192,13 +231,13 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
             for (let i = 0; i < slides.length; i++) {
                 const text = slides[i].trim();
                 
-                // Criar um canvas com dimensões 1920x1080 (16:9)
-                const canvas = createCanvas(1920, 1080);
+                // Criar um canvas com dimensões baseado na orientação
+                const canvas = createCanvas(width, height);
                 const ctx = canvas.getContext('2d');
 
                 // Preencher o fundo
                 ctx.fillStyle = styleOptions.backgroundColor;
-                ctx.fillRect(0, 0, 1920, 1080);
+                ctx.fillRect(0, 0, width, height);
 
                 // Configurar o texto
                 ctx.fillStyle = styleOptions.textColor;
@@ -207,7 +246,7 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
                 ctx.textBaseline = 'middle';
 
                 // Adicionar o texto
-                ctx.fillText(text, 960, 540);
+                ctx.fillText(text, width/2, height/2);
 
                 // Converter o canvas para buffer
                 const buffer = canvas.toBuffer('image/png');

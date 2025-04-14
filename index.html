@@ -351,6 +351,13 @@
                         </select>
                     </div>
                     <div class="style-group">
+                        <label>Orientação:</label>
+                        <select id="orientation">
+                            <option value="horizontal">Horizontal (16:9)</option>
+                            <option value="vertical">Vertical (9:16)</option>
+                        </select>
+                    </div>
+                    <div class="style-group">
                         <label>Estilo do Texto:</label>
                         <div class="text-style-options">
                             <label>
@@ -496,7 +503,8 @@
                 fontFamily: document.getElementById('fontFamily').value,
                 bold: document.getElementById('bold').checked,
                 italic: document.getElementById('italic').checked,
-                underline: document.getElementById('underline').checked
+                underline: document.getElementById('underline').checked,
+                orientation: document.getElementById('orientation').value
             };
 
             document.getElementById('vslLogEntries').innerHTML = '';
