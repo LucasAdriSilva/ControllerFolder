@@ -170,7 +170,7 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
             const slides = text.split('\n').filter(line => line.trim());
 
             // Configurar o estilo padrão para todas as slides
-            pres.layout = isVertical ? 'LAYOUT_9x16' : 'LAYOUT_16x9';
+            pres.layout = isVertical ? 'LAYOUT_WIDE' : 'LAYOUT_WIDE';
             pres.author = 'VSL Creator';
 
             for (let i = 0; i < slides.length; i++) {
@@ -182,10 +182,10 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
 
                 // Configurar o texto com as opções de estilo
                 const textOptions = {
-                    x: '10%',
-                    y: '40%',
-                    w: '80%',
-                    h: '20%',
+                    x: isVertical ? '10%' : '10%',
+                    y: isVertical ? '30%' : '40%',
+                    w: isVertical ? '80%' : '80%',
+                    h: isVertical ? '40%' : '20%',
                     fontSize: styleOptions.fontSize,
                     color: styleOptions.textColor.replace('#', ''),
                     align: 'center',
