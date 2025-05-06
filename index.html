@@ -272,6 +272,29 @@
         .content-section.active {
             display: block;
         }
+
+        .size-inputs {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .size-inputs input[type="number"] {
+            width: 80px;
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .size-inputs span {
+            color: #666;
+            font-weight: 500;
+        }
     </style>
 </head>
 
@@ -281,6 +304,7 @@
         <div class="menu-item active" data-page="renomeador">Renomeador de Arquivos</div>
         <div class="menu-item" data-page="vsl">Criador de VSL</div>
         <div class="menu-item" data-section="convert">Converter Imagens</div>
+        <div class="menu-item" data-page="resize">Redimensionar Imagens</div>
     </div>
 
     <div class="main-content">
@@ -391,8 +415,36 @@
             </div>
         </div>
 
-        <div id="rename-section" class="content-section active">
-            <!-- ... existing code ... -->
+        <div class="page" id="resize">
+            <div class="container">
+                <h1>Redimensionar Imagens</h1>
+                
+                <div class="instructions">
+                    <p>1. Selecione uma imagem ou pasta com imagens</p>
+                    <p>2. Defina o tamanho desejado em pixels</p>
+                    <p>3. Clique em "Redimensionar" para processar as imagens</p>
+                </div>
+
+                <div class="button-group">
+                    <button id="selectResizeFolder">Selecionar Imagem/Pasta</button>
+                    <div class="size-inputs">
+                        <input type="number" id="resizeWidth" placeholder="Largura" value="32" min="1">
+                        <span>x</span>
+                        <input type="number" id="resizeHeight" placeholder="Altura" value="32" min="1">
+                        <span>px</span>
+                    </div>
+                    <button id="resizeImages">Redimensionar</button>
+                </div>
+
+                <div class="status-container">
+                    <p id="resizeStatus"></p>
+                </div>
+
+                <div class="log-container">
+                    <div class="log-title">Log de Operações</div>
+                    <div id="resizeLogEntries"></div>
+                </div>
+            </div>
         </div>
 
         <div id="convert-section" class="content-section">
@@ -414,9 +466,7 @@
             </div>
         </div>
 
-        <div id="powerpoint-section" class="content-section">
-            <!-- ... existing code ... -->
-        </div>
+        
     </div>
 
     <script>
@@ -560,6 +610,49 @@
                     return `<div class="log-entry">${log}</div>`;
                 }
             }).join('');
+        });
+
+        // Funções do Redimensionador de Imagens
+        function addResizeLogEntry(message) {
+            const logEntries = document.getElementById('resizeLogEntries');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = message;
+            logEntries.insertBefore(entry, logEntries.firstChild);
+        }
+
+        document.getElementById('selectResizeFolder').addEventListener('click', async () => {
+            const path = await ipcRenderer.invoke('select-resize-image');
+            if (path) {
+                document.getElementById('resizeStatus').textContent = `Selecionado: ${path}`;
+                window.resizePath = path;
+                addResizeLogEntry(`Arquivo selecionado: ${path}`);
+            }
+        });
+
+        document.getElementById('resizeImages').addEventListener('click', async () => {
+            if (!window.resizePath) {
+                alert('Por favor, selecione uma imagem ou pasta primeiro!');
+                return;
+            }
+
+            const width = parseInt(document.getElementById('resizeWidth').value);
+            const height = parseInt(document.getElementById('resizeHeight').value);
+
+            if (isNaN(width) || isNaN(height) || width < 1 || height < 1) {
+                alert('Por favor, insira dimensões válidas!');
+                return;
+            }
+
+            document.getElementById('resizeStatus').textContent = 'Redimensionando...';
+            document.getElementById('resizeLogEntries').innerHTML = '';
+
+            const result = await ipcRenderer.invoke('resize-images', window.resizePath, width, height);
+            document.getElementById('resizeStatus').textContent = result.message;
+
+            if (result.logs) {
+                result.logs.forEach(log => addResizeLogEntry(log));
+            }
         });
     </script>
 </body>

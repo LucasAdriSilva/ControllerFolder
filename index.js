@@ -67,7 +67,7 @@ ipcMain.handle('rename-files', async (_, folderPath) => {
         const newFileName = `${counter} - ${file}`;
         const oldPath = path.join(folderPath, file);
         const newPath = path.join(folderPath, newFileName);
-        
+
         try {
             fs.renameSync(oldPath, newPath);
             logs.push(`✓ Renomeado: ${file} → ${newFileName}`);
@@ -82,8 +82,8 @@ ipcMain.handle('rename-files', async (_, folderPath) => {
     });
 
     logs.push('Processo de renomeação concluído!');
-    return { 
-        success: true, 
+    return {
+        success: true,
         message: 'Arquivos renomeados com sucesso!',
         logs: logs
     };
@@ -101,7 +101,7 @@ async function generatePowerPoint(text, styleOptions, outputPath) {
     for (let i = 0; i < slides.length; i++) {
         const slide = pres.addSlide();
         const text = slides[i].trim();
-        
+
         // Configurar o fundo da slide
         slide.background = { color: styleOptions.backgroundColor };
 
@@ -173,13 +173,17 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
             const slides = text.split('\n').filter(line => line.trim());
 
             // Configurar o estilo padrão para todas as slides
-            pres.layout = isVertical ? 'LAYOUT_WIDE' : 'LAYOUT_WIDE';
+            if (isVertical) {
+                pres.defineLayout({ width: 11.7, height: 16.5 });
+            } else {
+                pres.layout = isVertical ? '9x16' : '16x9';
+            }
             pres.author = 'VSL Creator';
 
             for (let i = 0; i < slides.length; i++) {
                 const slide = pres.addSlide();
                 const text = slides[i].trim();
-                
+
                 // Configurar o fundo da slide
                 slide.background = { color: styleOptions.backgroundColor };
 
@@ -227,17 +231,17 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
 
             const outputDir = folderResult.filePaths[0];
             const imagesDir = path.join(outputDir, 'imagens');
-            
+
             // Criar pasta 'imagens' se não existir
             if (!fs.existsSync(imagesDir)) {
                 fs.mkdirSync(imagesDir);
             }
 
             const slides = text.split('\n').filter(line => line.trim());
-            
+
             for (let i = 0; i < slides.length; i++) {
                 const text = slides[i].trim();
-                
+
                 // Criar um canvas com dimensões baseado na orientação
                 const canvas = createCanvas(width, height);
                 const ctx = canvas.getContext('2d');
@@ -253,7 +257,7 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
                 ctx.textBaseline = 'middle';
 
                 // Adicionar o texto
-                ctx.fillText(text, width/2, height/2);
+                ctx.fillText(text, width / 2, height / 2);
 
                 // Converter o canvas para buffer
                 const buffer = canvas.toBuffer('image/png');
@@ -261,7 +265,7 @@ ipcMain.handle('create-vsl', async (_, text, styleOptions) => {
                 // Salvar a imagem com numeração simples
                 const fileName = `${i + 1}.png`;
                 const filePath = path.join(imagesDir, fileName);
-                
+
                 await sharp(buffer)
                     .png()
                     .toFile(filePath);
@@ -292,10 +296,26 @@ ipcMain.handle('select-image-folder', async () => {
         filters: [
             { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'tiff'] },
             { name: 'Todos os Arquivos', extensions: ['*'] }
-        ]
+        ],
+        buttonLabel: 'Selecionar',
+        title: 'Selecionar Imagem ou Pasta',
+        defaultPath: app.getPath('pictures')
     });
     selectedImagePath = result.filePaths[0] || null;
     return selectedImagePath;
+});
+
+ipcMain.handle('select-resize-image', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile'],
+        filters: [
+            { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'tiff'] }
+        ],
+        buttonLabel: 'Selecionar Imagem',
+        title: 'Selecionar Imagem para Redimensionar',
+        defaultPath: app.getPath('pictures')
+    });
+    return result.filePaths[0] || null;
 });
 
 ipcMain.handle('convert-images', async (_, outputFormat) => {
@@ -305,7 +325,7 @@ ipcMain.handle('convert-images', async (_, outputFormat) => {
 
     const stats = fs.statSync(selectedImagePath);
     const isDirectory = stats.isDirectory();
-    const files = isDirectory 
+    const files = isDirectory
         ? fs.readdirSync(selectedImagePath).filter(file => {
             const ext = path.extname(file).toLowerCase();
             return ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff'].includes(ext);
@@ -314,7 +334,7 @@ ipcMain.handle('convert-images', async (_, outputFormat) => {
 
     // Criar pasta de saída com nome mais descritivo
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const outputDir = isDirectory 
+    const outputDir = isDirectory
         ? path.join(selectedImagePath, `imagens_convertidas_${outputFormat.toUpperCase()}_${timestamp}`)
         : path.join(path.dirname(selectedImagePath), `imagens_convertidas_${outputFormat.toUpperCase()}_${timestamp}`);
 
@@ -346,7 +366,7 @@ ipcMain.handle('convert-images', async (_, outputFormat) => {
 
             // Calcular redução
             const reduction = ((originalStats.size - convertedStats.size) / originalStats.size * 100).toFixed(1);
-            
+
             logs.push(`✓ Convertido: ${file}`);
             logs.push(`  Tamanho original: ${originalSize} KB`);
             logs.push(`  Tamanho após conversão: ${convertedSize} KB`);
@@ -360,6 +380,83 @@ ipcMain.handle('convert-images', async (_, outputFormat) => {
     return {
         success: true,
         message: `Conversão concluída! Arquivos salvos em: ${outputDir}`,
+        logs
+    };
+});
+
+ipcMain.handle('resize-images', async (_, inputPath, width, height) => {
+    if (!inputPath) {
+        return { success: false, message: 'Nenhuma imagem ou pasta selecionada' };
+    }
+
+    const stats = fs.statSync(inputPath);
+    const isDirectory = stats.isDirectory();
+    
+    // Verificar se é um arquivo de imagem válido
+    if (!isDirectory) {
+        const ext = path.extname(inputPath).toLowerCase();
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff'];
+        if (!validExtensions.includes(ext)) {
+            return { 
+                success: false, 
+                message: 'O arquivo selecionado não é uma imagem válida',
+                logs: [`✗ Erro: O arquivo ${path.basename(inputPath)} não é uma imagem válida`]
+            };
+        }
+    }
+
+    const files = isDirectory
+        ? fs.readdirSync(inputPath).filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tiff'].includes(ext);
+        })
+        : [path.basename(inputPath)];
+
+    // Criar pasta de saída com nome descritivo
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const outputDir = isDirectory
+        ? path.join(inputPath, `imagens_redimensionadas_${width}x${height}_${timestamp}`)
+        : path.join(path.dirname(inputPath), `imagens_redimensionadas_${width}x${height}_${timestamp}`);
+
+    // Criar a pasta de saída
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const logs = [];
+    logs.push(`Iniciando redimensionamento de ${files.length} imagem(ns) para ${width}x${height}px...`);
+
+    for (const file of files) {
+        const inputFilePath = isDirectory ? path.join(inputPath, file) : inputPath;
+        const outputPath = path.join(outputDir, `${path.parse(file).name}.png`);
+
+        try {
+            // Obter dimensões originais
+            const metadata = await sharp(inputFilePath).metadata();
+            const originalWidth = metadata.width;
+            const originalHeight = metadata.height;
+
+            // Redimensionar a imagem
+            await sharp(inputFilePath)
+                .resize(width, height, {
+                    fit: 'fill', // Força o redimensionamento exato para as dimensões especificadas
+                    position: 'center'
+                })
+                .png() // Converter para PNG para manter a qualidade
+                .toFile(outputPath);
+
+            logs.push(`✓ Redimensionado: ${file}`);
+            logs.push(`  Dimensões originais: ${originalWidth}x${originalHeight}px`);
+            logs.push(`  Novas dimensões: ${width}x${height}px`);
+            logs.push(`  Salvo em: ${outputPath}`);
+        } catch (error) {
+            logs.push(`✗ Erro ao redimensionar ${file}: ${error.message}`);
+        }
+    }
+
+    return {
+        success: true,
+        message: `Redimensionamento concluído! Arquivos salvos em: ${outputDir}`,
         logs
     };
 });
