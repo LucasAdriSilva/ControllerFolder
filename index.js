@@ -386,7 +386,7 @@ ipcMain.handle('convert-images', async (_, outputFormat) => {
 
 ipcMain.handle('resize-images', async (_, inputPath, width, height) => {
     if (!inputPath) {
-        return { success: false, message: 'Nenhuma imagem ou pasta selecionada' };
+        return { success: false, message: 'Nenhuma imagem selecionada' };
     }
 
     const stats = fs.statSync(inputPath);
@@ -436,18 +436,60 @@ ipcMain.handle('resize-images', async (_, inputPath, width, height) => {
             const originalWidth = metadata.width;
             const originalHeight = metadata.height;
 
-            // Redimensionar a imagem
-            await sharp(inputFilePath)
-                .resize(width, height, {
-                    fit: 'fill', // Força o redimensionamento exato para as dimensões especificadas
-                    position: 'center'
+            // Calcular as novas dimensões mantendo a proporção
+            let newWidth = width;
+            let newHeight = height;
+            const originalRatio = originalWidth / originalHeight;
+            const targetRatio = width / height;
+
+            if (originalRatio > targetRatio) {
+                // Imagem original é mais larga que o alvo
+                newHeight = Math.round(width / originalRatio);
+            } else {
+                // Imagem original é mais alta que o alvo
+                newWidth = Math.round(height * originalRatio);
+            }
+
+            // Criar um canvas com o tamanho alvo
+            const canvas = createCanvas(width, height);
+            const ctx = canvas.getContext('2d');
+
+            // Preencher o fundo com branco
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+
+            // Calcular a posição central
+            const x = Math.round((width - newWidth) / 2);
+            const y = Math.round((height - newHeight) / 2);
+
+            // Redimensionar a imagem mantendo a proporção
+            const resizedBuffer = await sharp(inputFilePath)
+                .resize(newWidth, newHeight, {
+                    fit: 'contain',
+                    background: { r: 255, g: 255, b: 255, alpha: 1 }
                 })
-                .png() // Converter para PNG para manter a qualidade
+                .toBuffer();
+
+            // Converter o buffer para uma imagem
+            const img = await sharp(resizedBuffer).toBuffer();
+
+            // Colar a imagem redimensionada no centro do canvas
+            await sharp(canvas.toBuffer())
+                .composite([{
+                    input: img,
+                    top: y,
+                    left: x
+                }])
+                .png({
+                    quality: 100,
+                    compressionLevel: 9
+                })
                 .toFile(outputPath);
 
             logs.push(`✓ Redimensionado: ${file}`);
             logs.push(`  Dimensões originais: ${originalWidth}x${originalHeight}px`);
-            logs.push(`  Novas dimensões: ${width}x${height}px`);
+            logs.push(`  Dimensões redimensionadas: ${newWidth}x${newHeight}px`);
+            logs.push(`  Dimensões finais: ${width}x${height}px`);
             logs.push(`  Salvo em: ${outputPath}`);
         } catch (error) {
             logs.push(`✗ Erro ao redimensionar ${file}: ${error.message}`);
