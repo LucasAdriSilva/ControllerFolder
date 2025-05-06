@@ -295,6 +295,102 @@
             color: #666;
             font-weight: 500;
         }
+
+        .unity-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .option-group {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .option-group h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            flex: 1;
+            color: #555;
+        }
+
+        .input-group input[type="number"] {
+            width: 100px;
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .input-group span {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .preview-container {
+            margin-top: 2rem;
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .preview-container h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        #spritePreview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 4px;
+            min-height: 200px;
+        }
+
+        #spritePreview img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .meta-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #1976D2;
+        }
+
+        .meta-info pre {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .button-group button {
+            margin: 0.5rem 0;
+        }
     </style>
 </head>
 
@@ -305,6 +401,7 @@
         <div class="menu-item" data-page="vsl">Criador de VSL</div>
         <div class="menu-item" data-section="convert">Converter Imagens</div>
         <div class="menu-item" data-page="resize">Redimensionar Imagens</div>
+        <div class="menu-item" data-page="unity">Unity Editor</div>
     </div>
 
     <div class="main-content">
@@ -466,7 +563,100 @@
             </div>
         </div>
 
-        
+        <!-- Página do Unity Editor -->
+        <div class="page" id="unity">
+            <div class="container">
+                <h1>Unity Editor</h1>
+
+                <div class="instructions">
+                    <p>1. Selecione a imagem do sprite sheet</p>
+                    <p>2. Configure as dimensões de corte</p>
+                    <p>3. Configure o redimensionamento final</p>
+                    <p>4. Clique em "Processar" para gerar os sprites</p>
+                </div>
+
+                <div class="unity-options">
+                    <!-- Seção de Corte Manual -->
+                    <div class="option-group">
+                        <h3>Corte Manual</h3>
+                        <div class="input-group">
+                            <label>Imagem Original:</label>
+                            <button id="selectUnityImage">Selecionar Imagem</button>
+                        </div>
+                        <div class="input-group">
+                            <label>Largura do Sprite:</label>
+                            <input type="number" id="spriteWidth" value="32" min="1">
+                            <span>px</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Altura do Sprite:</label>
+                            <input type="number" id="spriteHeight" value="32" min="1">
+                            <span>px</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Espaçamento Horizontal:</label>
+                            <input type="number" id="spacingX" value="0" min="0">
+                            <span>px</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Espaçamento Vertical:</label>
+                            <input type="number" id="spacingY" value="0" min="0">
+                            <span>px</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Largura Final:</label>
+                            <input type="number" id="finalWidth" value="32" min="1">
+                            <span>px</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Altura Final:</label>
+                            <input type="number" id="finalHeight" value="32" min="1">
+                            <span>px</span>
+                        </div>
+                        <div class="button-group">
+                            <button id="processManualSprites">Processar Corte Manual</button>
+                        </div>
+                    </div>
+
+                    <!-- Seção de Processamento via .meta -->
+                    <div class="option-group">
+                        <h3>Processamento via Unity Meta</h3>
+                        <div class="input-group">
+                            <label>Arquivo .meta:</label>
+                            <button id="selectUnityMeta">Selecionar .meta</button>
+                        </div>
+                        <div class="input-group">
+                            <label>Largura Final:</label>
+                            <input type="number" id="metaFinalWidth" value="32" min="1">
+                            <span>px</span>
+                        </div>
+                        <div class="input-group">
+                            <label>Altura Final:</label>
+                            <input type="number" id="metaFinalHeight" value="32" min="1">
+                            <span>px</span>
+                        </div>
+                        <div id="metaInfo" class="meta-info"></div>
+                        <div class="button-group">
+                            <button id="processMetaSprites">Processar via .meta</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preview-container">
+                    <h3>Prévia</h3>
+                    <div id="spritePreview"></div>
+                </div>
+
+                <div class="status-container">
+                    <p id="unityStatus"></p>
+                </div>
+
+                <div class="log-container">
+                    <div class="log-title">Log de Operações</div>
+                    <div id="unityLogEntries"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -652,6 +842,102 @@
 
             if (result.logs) {
                 result.logs.forEach(log => addResizeLogEntry(log));
+            }
+        });
+
+        // Funções do Unity Editor
+        function addUnityLogEntry(message) {
+            const logEntries = document.getElementById('unityLogEntries');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = message;
+            logEntries.insertBefore(entry, logEntries.firstChild);
+        }
+
+        // Função de Corte Manual
+        document.getElementById('selectUnityImage').addEventListener('click', async () => {
+            const path = await ipcRenderer.invoke('select-resize-image');
+            if (path) {
+                document.getElementById('unityStatus').textContent = `Imagem selecionada: ${path}`;
+                window.manualImagePath = path;
+                addUnityLogEntry(`Imagem selecionada para corte manual: ${path}`);
+                
+                // Carregar prévia da imagem
+                const preview = document.getElementById('spritePreview');
+                preview.innerHTML = `<img src="file://${path}" alt="Sprite Sheet Preview">`;
+            }
+        });
+
+        document.getElementById('processManualSprites').addEventListener('click', async () => {
+            if (!window.manualImagePath) {
+                alert('Por favor, selecione uma imagem primeiro!');
+                return;
+            }
+
+            const options = {
+                spriteWidth: parseInt(document.getElementById('spriteWidth').value),
+                spriteHeight: parseInt(document.getElementById('spriteHeight').value),
+                spacingX: parseInt(document.getElementById('spacingX').value),
+                spacingY: parseInt(document.getElementById('spacingY').value),
+                finalWidth: parseInt(document.getElementById('finalWidth').value),
+                finalHeight: parseInt(document.getElementById('finalHeight').value)
+            };
+
+            if (isNaN(options.spriteWidth) || isNaN(options.spriteHeight) || 
+                isNaN(options.spacingX) || isNaN(options.spacingY) || 
+                isNaN(options.finalWidth) || isNaN(options.finalHeight)) {
+                alert('Por favor, preencha todos os campos com valores válidos!');
+                return;
+            }
+
+            document.getElementById('unityStatus').textContent = 'Processando sprites...';
+            document.getElementById('unityLogEntries').innerHTML = '';
+
+            const result = await ipcRenderer.invoke('process-unity-sprites', window.manualImagePath, options);
+            document.getElementById('unityStatus').textContent = result.message;
+
+            if (result.logs) {
+                result.logs.forEach(log => addUnityLogEntry(log));
+            }
+        });
+
+        // Função de Processamento via .meta
+        document.getElementById('selectUnityMeta').addEventListener('click', async () => {
+            const path = await ipcRenderer.invoke('select-unity-meta');
+            if (path) {
+                window.unityMetaPath = path;
+                addUnityLogEntry(`Arquivo .meta selecionado: ${path}`);
+                
+                // Mostrar informações do arquivo .meta
+                const metaInfo = document.getElementById('metaInfo');
+                metaInfo.innerHTML = `<strong>Arquivo .meta selecionado:</strong><br>${path}`;
+            }
+        });
+
+        document.getElementById('processMetaSprites').addEventListener('click', async () => {
+            if (!window.unityMetaPath) {
+                alert('Por favor, selecione o arquivo .meta da Unity!');
+                return;
+            }
+
+            const options = {
+                finalWidth: parseInt(document.getElementById('metaFinalWidth').value),
+                finalHeight: parseInt(document.getElementById('metaFinalHeight').value)
+            };
+
+            if (isNaN(options.finalWidth) || isNaN(options.finalHeight)) {
+                alert('Por favor, defina as dimensões finais desejadas!');
+                return;
+            }
+
+            document.getElementById('unityStatus').textContent = 'Processando sprites via .meta...';
+            document.getElementById('unityLogEntries').innerHTML = '';
+
+            const result = await ipcRenderer.invoke('process-unity-meta', window.unityMetaPath, options);
+            document.getElementById('unityStatus').textContent = result.message;
+
+            if (result.logs) {
+                result.logs.forEach(log => addUnityLogEntry(log));
             }
         });
     </script>

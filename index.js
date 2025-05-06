@@ -450,23 +450,22 @@ ipcMain.handle('resize-images', async (_, inputPath, width, height) => {
                 newWidth = Math.round(height * originalRatio);
             }
 
-            // Criar um canvas com o tamanho alvo
+            // Criar um canvas com o tamanho alvo e fundo transparente
             const canvas = createCanvas(width, height);
             const ctx = canvas.getContext('2d');
 
-            // Preencher o fundo com branco
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, width, height);
+            // Limpar o canvas com transparência
+            ctx.clearRect(0, 0, width, height);
 
             // Calcular a posição central
             const x = Math.round((width - newWidth) / 2);
             const y = Math.round((height - newHeight) / 2);
 
-            // Redimensionar a imagem mantendo a proporção
+            // Redimensionar a imagem mantendo a proporção e transparência
             const resizedBuffer = await sharp(inputFilePath)
                 .resize(newWidth, newHeight, {
                     fit: 'contain',
-                    background: { r: 255, g: 255, b: 255, alpha: 1 }
+                    background: { r: 0, g: 0, b: 0, alpha: 0 }
                 })
                 .toBuffer();
 
@@ -482,7 +481,8 @@ ipcMain.handle('resize-images', async (_, inputPath, width, height) => {
                 }])
                 .png({
                     quality: 100,
-                    compressionLevel: 9
+                    compressionLevel: 9,
+                    background: { r: 0, g: 0, b: 0, alpha: 0 }
                 })
                 .toFile(outputPath);
 
@@ -501,4 +501,270 @@ ipcMain.handle('resize-images', async (_, inputPath, width, height) => {
         message: `Redimensionamento concluído! Arquivos salvos em: ${outputDir}`,
         logs
     };
+});
+
+ipcMain.handle('process-unity-sprites', async (_, inputPath, options) => {
+    if (!inputPath) {
+        return { success: false, message: 'Nenhuma imagem selecionada' };
+    }
+
+    try {
+        // Obter metadados da imagem
+        const metadata = await sharp(inputPath).metadata();
+        const imageWidth = metadata.width;
+        const imageHeight = metadata.height;
+
+        // Calcular número de sprites por linha e coluna
+        const spritesPerRow = Math.floor((imageWidth + options.spacingX) / (options.spriteWidth + options.spacingX));
+        const spritesPerColumn = Math.floor((imageHeight + options.spacingY) / (options.spriteHeight + options.spacingY));
+        const totalSprites = spritesPerRow * spritesPerColumn;
+
+        // Criar pasta de saída
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const outputDir = path.join(path.dirname(inputPath), `unity_sprites_${timestamp}`);
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        const logs = [];
+        logs.push(`Processando sprite sheet: ${path.basename(inputPath)}`);
+        logs.push(`Dimensões originais: ${imageWidth}x${imageHeight}px`);
+        logs.push(`Sprites por linha: ${spritesPerRow}`);
+        logs.push(`Sprites por coluna: ${spritesPerColumn}`);
+        logs.push(`Total de sprites: ${totalSprites}`);
+
+        // Processar cada sprite
+        for (let row = 0; row < spritesPerColumn; row++) {
+            for (let col = 0; col < spritesPerRow; col++) {
+                const spriteIndex = row * spritesPerRow + col;
+                const outputPath = path.join(outputDir, `sprite_${spriteIndex + 1}.png`);
+
+                // Calcular posição do sprite
+                const left = col * (options.spriteWidth + options.spacingX);
+                const top = row * (options.spriteHeight + options.spacingY);
+
+                // Extrair e redimensionar o sprite
+                await sharp(inputPath)
+                    .extract({
+                        left: left,
+                        top: top,
+                        width: options.spriteWidth,
+                        height: options.spriteHeight
+                    })
+                    .resize(options.finalWidth, options.finalHeight, {
+                        fit: 'contain',
+                        background: { r: 0, g: 0, b: 0, alpha: 0 }
+                    })
+                    .png({
+                        quality: 100,
+                        compressionLevel: 9
+                    })
+                    .toFile(outputPath);
+
+                logs.push(`✓ Processado sprite ${spriteIndex + 1}`);
+            }
+        }
+
+        logs.push(`Todos os sprites foram processados e salvos em: ${outputDir}`);
+
+        return {
+            success: true,
+            message: 'Sprites processados com sucesso!',
+            logs: logs
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: `Erro ao processar sprites: ${error.message}`,
+            logs: [`✗ Erro: ${error.message}`]
+        };
+    }
+});
+
+ipcMain.handle('select-unity-meta', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile'],
+        filters: [
+            { name: 'Unity Meta Files', extensions: ['meta'] }
+        ],
+        buttonLabel: 'Selecionar Meta',
+        title: 'Selecionar Arquivo .meta da Unity'
+    });
+    return result.filePaths[0] || null;
+});
+
+function parseUnityMeta(metaContent) {
+    const spriteData = {
+        sprites: [],
+        pixelsToUnits: 100,
+        pivot: { x: 0.5, y: 0.5 }
+    };
+
+    console.log('Iniciando análise do arquivo .meta...');
+
+    // Dividir o conteúdo em linhas
+    const lines = metaContent.split('\n');
+    let currentSprite = null;
+
+    // Procurar por cada sprite no arquivo
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Se encontrar o início de um sprite
+        if (line.includes('name:') && line.includes('[SHOOT]')) {
+            const name = line.split('name:')[1].trim().replace(/['"]/g, '');
+            currentSprite = {
+                name: name,
+                rect: { x: 0, y: 0, width: 0, height: 0 }
+            };
+        }
+
+        // Se encontrar as coordenadas do sprite
+        if (currentSprite) {
+            if (line.includes('x:')) {
+                currentSprite.rect.x = parseInt(line.split('x:')[1].trim());
+            }
+            if (line.includes('y:')) {
+                currentSprite.rect.y = parseInt(line.split('y:')[1].trim());
+            }
+            if (line.includes('width:')) {
+                currentSprite.rect.width = parseInt(line.split('width:')[1].trim());
+            }
+            if (line.includes('height:')) {
+                currentSprite.rect.height = parseInt(line.split('height:')[1].trim());
+                
+                // Se temos todas as coordenadas, adicionar o sprite
+                if (currentSprite.rect.width > 0 && currentSprite.rect.height > 0) {
+                    spriteData.sprites.push(currentSprite);
+                    console.log('Sprite encontrado:', currentSprite);
+                }
+                currentSprite = null;
+            }
+        }
+    }
+
+    console.log('Total de sprites encontrados:', spriteData.sprites.length);
+    return spriteData;
+}
+
+ipcMain.handle('process-unity-meta', async (_, metaPath, options) => {
+    try {
+        // Passo 1: Ler o arquivo .meta e coletar os dados
+        const metaContent = fs.readFileSync(metaPath, 'utf8');
+        console.log('Arquivo .meta lido:', metaPath);
+        
+        const spriteData = parseUnityMeta(metaContent);
+        console.log('Dados dos sprites extraídos:', spriteData);
+
+        if (spriteData.sprites.length === 0) {
+            return {
+                success: false,
+                message: 'Nenhum sprite encontrado no arquivo .meta',
+                logs: ['✗ Erro: Nenhum sprite encontrado no arquivo .meta']
+            };
+        }
+
+        // Passo 2: Encontrar a imagem correspondente ao .meta
+        const metaFileName = path.basename(metaPath, '.meta');
+        const metaDir = path.dirname(metaPath);
+        
+        // Lista de extensões possíveis para imagens
+        const possibleExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.tga', '.psd', '.tif', '.tiff'];
+        let imagePath = null;
+
+        // Primeiro, tentar encontrar a imagem com o mesmo nome do arquivo .meta
+        for (const ext of possibleExtensions) {
+            const possiblePath = path.join(metaDir, metaFileName + ext);
+            if (fs.existsSync(possiblePath)) {
+                imagePath = possiblePath;
+                break;
+            }
+        }
+
+        // Se não encontrou, procurar por qualquer imagem na pasta
+        if (!imagePath) {
+            const files = fs.readdirSync(metaDir);
+            for (const file of files) {
+                const ext = path.extname(file).toLowerCase();
+                if (possibleExtensions.includes(ext)) {
+                    imagePath = path.join(metaDir, file);
+                    break;
+                }
+            }
+        }
+
+        if (!imagePath) {
+            return {
+                success: false,
+                message: 'Imagem referenciada pelo .meta não encontrada',
+                logs: [
+                    '✗ Erro: Imagem referenciada pelo .meta não encontrada',
+                    'Tentou encontrar arquivos com as seguintes extensões: ' + possibleExtensions.join(', '),
+                    'Diretório pesquisado: ' + metaDir
+                ]
+            };
+        }
+
+        // Criar pasta de saída
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const outputDir = path.join(metaDir, `unity_sprites_${timestamp}`);
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        const logs = [];
+        logs.push(`Processando sprite sheet: ${path.basename(imagePath)}`);
+        logs.push(`Total de sprites encontrados: ${spriteData.sprites.length}`);
+
+        // Passo 3: Processar cada sprite
+        for (const sprite of spriteData.sprites) {
+            // Primeiro, extrair o sprite da imagem original
+            const tempPath = path.join(outputDir, `temp_${sprite.name}.png`);
+            const outputPath = path.join(outputDir, `${sprite.name}.png`);
+
+            // Extrair o sprite usando as dimensões do .meta
+            await sharp(imagePath)
+                .extract({
+                    left: sprite.rect.x,
+                    top: sprite.rect.y,
+                    width: sprite.rect.width,
+                    height: sprite.rect.height
+                })
+                .toFile(tempPath);
+
+            // Depois, redimensionar para o tamanho final
+            await sharp(tempPath)
+                .resize(options.finalWidth, options.finalHeight, {
+                    fit: 'contain',
+                    background: { r: 0, g: 0, b: 0, alpha: 0 }
+                })
+                .png({
+                    quality: 100,
+                    compressionLevel: 9
+                })
+                .toFile(outputPath);
+
+            // Remover o arquivo temporário
+            fs.unlinkSync(tempPath);
+
+            logs.push(`✓ Sprite processado: ${sprite.name}`);
+            logs.push(`  Posição original: x=${sprite.rect.x}, y=${sprite.rect.y}`);
+            logs.push(`  Dimensões originais: ${sprite.rect.width}x${sprite.rect.height}`);
+            logs.push(`  Dimensões finais: ${options.finalWidth}x${options.finalHeight}`);
+        }
+
+        logs.push(`Todos os sprites foram processados e salvos em: ${outputDir}`);
+
+        return {
+            success: true,
+            message: 'Sprites processados com sucesso!',
+            logs: logs
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: `Erro ao processar sprites: ${error.message}`,
+            logs: [`✗ Erro: ${error.message}`]
+        };
+    }
 });
